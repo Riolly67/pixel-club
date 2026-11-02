@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101426">
+  <title>Pixel Club — Mini-jeux</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Pixel Club accueil"><span class="brand-mark">✦</span> PIXEL CLUB</a>
+      <div class="top-note"><span class="live-dot"></span> ARCADE EN LIGNE</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">TON PETIT COIN ARCADE</p>
+          <h1>Une pause.<br><span>Un jeu. Une revanche.</span></h1>
+          <p class="intro">Choisis un mini-jeu et bats ton meilleur score. Tout se joue directement dans ton navigateur.</p>
+          <a class="primary-link" href="#games">Explorer les jeux <span>↓</span></a>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="pixel-card card-a">✦</div><div class="pixel-card card-b">★</div>
+          <div class="pixel-card card-c">◆</div><div class="hero-cube">P<span>C</span></div>
+        </div>
+      </section>
+
+      <section class="section-heading" id="games">
+        <div><p class="eyebrow">LA SÉLECTION</p><h2>À toi de jouer</h2></div>
+        <span class="game-count">05 MINI-JEUX</span>
+      </section>
+
+      <section class="game-grid">
+        <button class="game-card featured" data-game="snake">
+          <span class="game-icon snake-icon">〰</span><span class="tag">ARCADE</span>
+          <span class="game-title">Snake</span><span class="game-desc">Grandis sans te mordre la queue.</span><span class="play-label">JOUER <b>↗</b></span>
+        </button>
+        <button class="game-card" data-game="memory">
+          <span class="game-icon memory-icon">▦</span><span class="tag">MÉMOIRE</span>
+          <span class="game-title">Memory</span><span class="game-desc">Retrouve toutes les paires.</span><span class="play-label">JOUER <b>↗</b></span>
+        </button>
+        <button class="game-card" data-game="tictactoe">
+          <span class="game-icon tic-icon">✕○</span><span class="tag">DUEL</span>
+          <span class="game-title">Morpion</span><span class="game-desc">Aligne trois symboles pour gagner.</span><span class="play-label">JOUER <b>↗</b></span>
+        </button>
+        <button class="game-card" data-game="reaction">
+          <span class="game-icon reaction-icon">⚡</span><span class="tag">RÉFLEXES</span>
+          <span class="game-title">Réflexe</span><span class="game-desc">Clique dès que l'écran devient vert.</span><span class="play-label">JOUER <b>↗</b></span>
+        </button>
+        <button class="game-card" data-game="2048">
+          <span class="game-icon number-icon">2048</span><span class="tag">LOGIQUE</span>
+          <span class="game-title">2048</span><span class="game-desc">Fusionne les nombres pour atteindre 2048.</span><span class="play-label">JOUER <b>↗</b></span>
+        </button>
+      </section>
+
+      <section class="play-area hidden" id="playArea">
+        <div class="play-top"><div><p class="eyebrow">ZONE DE JEU</p><h2 id="gameHeading">Snake</h2></div><button class="back-button" id="backButton">← Tous les jeux</button></div>
+        <div class="game-panel" id="gamePanel"></div>
+      </section>
+    </main>
+    <footer><span>✦ PIXEL CLUB</span><span>Fait pour jouer · Gratuit · Sans inscription</span></footer>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
