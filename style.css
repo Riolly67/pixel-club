@@ -1,60 +1,371 @@
-/* AMELIORATIONS PIXEL CLUB */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0b1020;
+  --panel: #151d33;
+  --panel2: #202c49;
+  --text: #f4f6ff;
+  --muted: #a8b2cc;
+  --purple: #a78bfa;
+  --cyan: #67e8f9;
+  --pink: #fb8acb;
+  --green: #65e6ad;
+  --line: rgba(255,255,255,.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 0 20px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% 5%, #48327c55, transparent 35%),
+    radial-gradient(circle at 90% 25%, #176a7950, transparent 30%),
+    var(--bg);
+  font-family: 'Space Grotesk', Arial, sans-serif;
+}
+
+header, main, footer, section {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+header {
+  padding: 25px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--cyan);
+  transition: .2s;
+}
+
+a:hover {
+  color: var(--purple);
+}
+
+h1, h2, h3 {
+  color: var(--text);
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6vw, 4.8rem);
+  letter-spacing: -3px;
+}
+
+h2 {
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+}
+
+p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+button {
+  padding: 12px 17px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel2);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform .2s, background .2s, border-color .2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  border-color: var(--cyan);
+  background: #344568;
+}
+
+button:active {
+  transform: scale(.97);
+}
+
+input, select, textarea {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--panel);
+  font: inherit;
+}
+
+main {
+  padding-top: 35px;
+}
+
+section {
+  margin-top: 45px;
+  margin-bottom: 45px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Cartes des mini-jeux */
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.game-card {
+  padding: 22px;
+  min-height: 190px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--panel2), var(--panel));
+}
+
+.game-card:hover {
+  border-color: var(--purple);
+  box-shadow: 0 12px 35px #0005;
+}
+
+.game-title {
+  display: block;
+  margin-top: 10px;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.game-desc {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+}
+
+.game-icon {
+  font-size: 2rem;
+}
+
+/* Zone de jeu */
+
+.game-panel {
+  padding: 25px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(145deg, #1b2742, #111a2e);
+  box-shadow: 0 15px 45px #0004;
+}
+
+.game-content {
+  text-align: center;
+}
+
+.score {
+  margin: 15px;
+  color: var(--cyan);
+  font-size: 1.1rem;
+}
+
+/* Snake */
+
+#snakeCanvas {
+  display: block;
+  width: min(360px, 100%);
+  height: auto;
+  margin: 20px auto;
+  border: 5px solid #344568;
+  border-radius: 15px;
+  background: #101a2b;
+}
+
+/* Mémoire */
 
 .level-row {
-    display:flex;
-    justify-content:center;
-    flex-wrap:wrap;
-    gap:10px;
-    margin:15px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px;
 }
 
 .memory-grid {
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:10px;
-    max-width:400px;
-    margin:auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(55px, 85px));
+  justify-content: center;
+  gap: 10px;
+  max-width: 390px;
+  margin: 20px auto;
 }
 
 .memory-tile {
-    aspect-ratio:1;
-    font-size:30px;
-    border-radius:12px;
-    cursor:pointer;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #35466e, #202d4b);
+  font-size: 30px;
+  cursor: pointer;
 }
 
 .memory-tile.open {
-    background:#51418b;
+  background: #6652ae;
 }
 
 .memory-tile.done {
-    background:#176b57;
+  background: #236c61;
+  border-color: var(--green);
 }
 
-#snakeCanvas {
-    width:100%;
-    max-width:360px;
-    border-radius:15px;
-    display:block;
-    margin:15px auto;
+/* Morpion */
+
+.tic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 90px);
+  gap: 9px;
+  justify-content: center;
+  margin: 22px auto;
 }
 
-.tile-pop {
-    animation:pop .15s ease;
+.tic-cell {
+  width: 90px;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #ffffff0b;
+  font-size: 2.5rem;
+  font-weight: 700;
 }
 
-@keyframes pop {
-    from {transform:scale(.7);}
-    to {transform:scale(1);}
+.tic-cell:hover {
+  background: #a78bfa33;
 }
 
-.animal-result {
-    font-size:18px;
-    margin:15px;
+/* Réflexes */
+
+.reaction-box {
+  display: grid;
+  place-items: center;
+  width: min(520px, 100%);
+  min-height: 180px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #29334c;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-@media(max-width:450px) {
-    .memory-grid {
-        gap:5px;
-    }
+.reaction-box.wait {
+  background: #a64c55;
+}
+
+.reaction-box.ready {
+  color: #08251b;
+  background: var(--green);
+}
+
+/* 2048 */
+
+.board2048 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(55px, 78px));
+  gap: 9px;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
+  margin: 20px auto;
+  padding: 10px;
+  border-radius: 15px;
+  background: #29344d;
+}
+
+.tile2048 {
+  display: grid;
+  place-items: center;
+  width: clamp(55px, 16vw, 78px);
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: #3b4965;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  font-weight: 700;
+  transition: transform .13s ease;
+}
+
+.tile2048.tile-pop {
+  animation: tilePop .16s ease-out;
+}
+
+@keyframes tilePop {
+  from { transform: scale(.82); }
+  to { transform: scale(1); }
+}
+
+.v2 { background: #eee4da; color: #51483f; }
+.v4 { background: #ede0c8; color: #51483f; }
+.v8 { background: #f2b179; }
+.v16 { background: #f59563; }
+.v32 { background: #f67c5f; }
+.v64 { background: #f65e3b; }
+.v128 { background: #edcf72; color: #342b20; }
+.v256 { background: #edcc61; color: #342b20; }
+.v512 { background: #edc850; color: #342b20; }
+.v1024, .v2048 { background: #edc53f; color: #342b20; }
+
+/* Pied de page */
+
+footer {
+  padding: 28px 0;
+  margin-top: 55px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Téléphones et petites fenêtres */
+
+@media (max-width: 700px) {
+  body {
+    padding: 0 13px;
+  }
+
+  .game-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .game-card {
+    min-height: 180px;
+    padding: 15px;
+  }
+
+  .game-title {
+    font-size: 1.2rem;
+  }
+
+  .tic-grid {
+    grid-template-columns: repeat(3, 76px);
+  }
+
+  .tic-cell {
+    width: 76px;
+  }
+
+  .memory-grid {
+    grid-template-columns: repeat(4, minmax(48px, 1fr));
+    gap: 6px;
+  }
+
+  .game-panel {
+    padding: 15px;
+  }
 }
