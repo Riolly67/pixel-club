@@ -11,7 +11,8 @@ const titles = {
     memory: 'Memory',
     tictactoe: 'Morpion',
     reaction: 'Test de réflexes',
-    '2048': '2048'
+    '2048': '2048',
+    connect4: 'Puissance 4'
 };
 
 document.querySelectorAll('[data-game]').forEach(button => {
@@ -40,7 +41,8 @@ function openGame(name) {
         memory,
         tictactoe,
         reaction,
-        '2048': game2048
+        '2048': game2048,
+        connect4
     };
 
     games[name]();
@@ -78,7 +80,7 @@ function snake() {
         <h3>🐍 Snake</h3>
         <p>Mange les pommes et évite les murs !</p>
         <div class="score" id="snakeScore"></div>
-        <canvas id="snakeCanvas" width="360" height="360"></canvas>
+        <canvas id="snakeCanvas" width="480" height="480" aria-label="Plateau de Snake"></canvas>
         <div id="snakeButtons"></div>
         <p>Pomme : +1 point | Fruit doré : +5 points</p>
     `);
@@ -86,8 +88,8 @@ function snake() {
     const canvas = document.getElementById('snakeCanvas');
     const ctx = canvas.getContext('2d');
 
-    const size = 20;
-    const total = 18;
+    const size = 24;
+    const total = 20;
 
     let snakeBody = [
         {x:7,y:9},
@@ -98,7 +100,7 @@ function snake() {
     let direction = {x:1,y:0};
     let nextDirection = {x:1,y:0};
 
-    let apple = {x:12,y:9};
+    let apple = {x:14,y:10};
     let bonus = null;
 
     let score = 0;
@@ -129,43 +131,39 @@ function snake() {
     function draw() {
 
         ctx.fillStyle = '#10172a';
-        ctx.fillRect(0,0,360,360);
+        ctx.fillRect(0,0,480,480);
 
         ctx.strokeStyle = '#ffffff10';
 
-        for(let i=0;i<=18;i++) {
+        for(let i=0;i<=20;i++) {
             ctx.beginPath();
-            ctx.moveTo(i*20,0);
-            ctx.lineTo(i*20,360);
+            ctx.moveTo(i*24,0);
+            ctx.lineTo(i*24,480);
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.moveTo(0,i*20);
-            ctx.lineTo(360,i*20);
+            ctx.moveTo(0,i*24);
+            ctx.lineTo(480,i*24);
             ctx.stroke();
         }
 
-        circle(apple.x*20+10,apple.y*20+11,8,'#ff435d');
+        circle(apple.x*24+12,apple.y*24+13,9,'#ff435d');
 
         ctx.fillStyle = '#65db83';
-        ctx.fillRect(apple.x*20+9,apple.y*20+1,3,7);
+        ctx.fillRect(apple.x*24+11,apple.y*24+1,4,8);
 
         if(bonus) {
-            circle(bonus.x*20+10,bonus.y*20+10,9,'#ffd447');
+            circle(bonus.x*24+12,bonus.y*24+12,10,'#ffd447');
         }
 
         snakeBody.forEach((p,i) => {
 
-            circle(
-                p.x*20+10,
-                p.y*20+10,
-                i===0 ? 9 : 8,
-                i===0 ? '#9af0d9' : '#39bda5'
-            );
+            ctx.fillStyle = i===0 ? '#9af0d9' : '#39bda5';
+            ctx.fillRect(p.x*24, p.y*24, 24, 24);
 
             if(i===0) {
-                circle(p.x*20+13,p.y*20+7,2,'#14233a');
-                circle(p.x*20+13,p.y*20+13,2,'#14233a');
+                circle(p.x*24+16,p.y*24+7,2.5,'#14233a');
+                circle(p.x*24+16,p.y*24+17,2.5,'#14233a');
             }
         });
 
@@ -215,8 +213,10 @@ function snake() {
             score++;
             newApple();
 
-            if(!bonus && Math.random()<0.3) {
-                bonus = randomPosition();
+            if(!bonus && Math.random()<0.08) {
+                do { bonus = randomPosition(); }
+                    while(snakeBody.some(p=>p.x===bonus.x && p.y===bonus.y) ||
+                          (bonus.x===apple.x && bonus.y===apple.y));
 
                 bonusTimer = setTimeout(()=>{
                     bonus=null;
@@ -300,13 +300,15 @@ function memory() {
 
     const images = [
         '🍉','🚀','🎧','⭐',
-        '🍀','🐙','🎲','🌈'
+        '🍀','🐙','🎲','🌈','🍓','🦊','⚽','🎮','🍩','🐸'
     ];
 
     const levels = [
+        {name:'Débutant',pairs:3},
         {name:'Facile',pairs:4},
-        {name:'Moyen',pairs:6},
-        {name:'Difficile',pairs:8}
+        {name:'Intermédiaire',pairs:6},
+        {name:'Difficile',pairs:8},
+        {name:'Expert',pairs:10}
     ];
 
     let timer;
@@ -415,404 +417,7 @@ function memory() {
             .append(button('Recommencer',()=>start(index)));
     }
 
-    start(1);
+    start(0);
 
     cleanup=()=>clearTimeout(timer);
-}
-
-// =========================
-// MORPION CONTRE IA
-// =========================
-
-function tictactoe() {
-
-    shell(`
-        <h3>Morpion</h3>
-        <div id="ticModes"></div>
-        <div class="score" id="ticStatus">À toi de jouer !</div>
-        <div class="tic-grid" id="ticGrid"></div>
-        <div id="ticActions"></div>
-    `);
-
-    let mode='ai';
-    let cells=[];
-    let turn='X';
-    let over=false;
-    let buttons=[];
-
-    const wins=[
-        [0,1,2],[3,4,5],[6,7,8],
-        [0,3,6],[1,4,7],[2,5,8],
-        [0,4,8],[2,4,6]
-    ];
-
-    const grid=document.getElementById('ticGrid');
-    const status=document.getElementById('ticStatus');
-
-    document.getElementById('ticModes').append(
-        button('Contre l’IA',()=>{mode='ai';reset();}),
-        button('Deux joueurs',()=>{mode='two';reset();})
-    );
-
-    function winner(a) {
-
-        for(const line of wins) {
-            if(a[line[0]] && line.every(i=>a[i]===a[line[0]])) {
-                return a[line[0]];
-            }
-        }
-
-        return a.every(Boolean)?'draw':null;
-    }
-
-    function minimax(a,max) {
-
-        const w=winner(a);
-
-        if(w==='O') return 10;
-        if(w==='X') return -10;
-        if(w==='draw') return 0;
-
-        let best=max?-Infinity:Infinity;
-
-        for(let i=0;i<9;i++) {
-
-            if(!a[i]) {
-
-                a[i]=max?'O':'X';
-
-                const value=minimax(a,!max);
-
-                a[i]='';
-
-                best=max?Math.max(best,value):Math.min(best,value);
-            }
-        }
-
-        return best;
-    }
-
-    function play(i,ai=false) {
-
-        if(over || cells[i]) return;
-        if(mode==='ai' && turn==='O' && !ai) return;
-
-        cells[i]=turn;
-        buttons[i].textContent=turn;
-
-        const w=winner(cells);
-
-        if(w) {
-            over=true;
-            status.textContent=
-                w==='draw'?'Match nul !':
-                mode==='ai' && w==='O'?'L’IA a gagné !':w+' a gagné !';
-            return;
-        }
-
-        turn=turn==='X'?'O':'X';
-
-        status.textContent=
-            mode==='ai'?(turn==='X'?'À toi de jouer !':'L’IA réfléchit...'):
-            'Au tour de '+turn;
-
-        if(mode==='ai' && turn==='O') {
-
-            setTimeout(()=>{
-
-                let best=-Infinity;
-                let choice=-1;
-
-                for(let j=0;j<9;j++) {
-
-                    if(!cells[j]) {
-
-                        cells[j]='O';
-
-                        const v=minimax(cells,false);
-
-                        cells[j]='';
-
-                        if(v>best) {
-                            best=v;
-                            choice=j;
-                        }
-                    }
-                }
-
-                if(choice>=0) play(choice,true);
-
-            },300);
-        }
-    }
-
-    function reset() {
-
-        cells=Array(9).fill('');
-        turn='X';
-        over=false;
-
-        grid.innerHTML='';
-        buttons=[];
-
-        status.textContent='À toi de jouer !';
-
-        for(let i=0;i<9;i++) {
-
-            const b=document.createElement('button');
-
-            b.className='tic-cell';
-            b.onclick=()=>play(i);
-
-            grid.append(b);
-            buttons.push(b);
-        }
-
-        document.getElementById('ticActions').innerHTML='';
-
-        document.getElementById('ticActions')
-            .append(button('Rejouer',reset));
-    }
-
-    reset();
-}
-
-// =========================
-// TEST DE REFLEXES
-// =========================
-
-function reaction() {
-
-    shell(`
-        <h3>Test de réflexes</h3>
-        <p>Clique dès que l'écran devient vert !</p>
-        <div class="score" id="reactionRecord"></div>
-        <div class="reaction-box" id="reactionBox">
-            Clique pour commencer
-        </div>
-        <p id="animalResult"></p>
-    `);
-
-    const box=document.getElementById('reactionBox');
-    const result=document.getElementById('animalResult');
-    const score=document.getElementById('reactionRecord');
-
-    let state='idle';
-    let start;
-    let best=record('reaction',null);
-    let timer;
-
-    function updateRecord() {
-        score.textContent='Record : '+(best===null?'—':best.toFixed(3)+' seconde(s)');
-    }
-
-    updateRecord();
-
-    box.onclick=()=>{
-
-        if(state==='idle' || state==='result') {
-
-            state='waiting';
-
-            box.className='reaction-box wait';
-            box.textContent='Attends le vert...';
-
-            result.textContent='';
-
-            timer=setTimeout(()=>{
-
-                state='ready';
-
-                start=performance.now();
-
-                box.className='reaction-box ready';
-                box.textContent='MAINTENANT !';
-
-            },1000+Math.random()*3000);
-
-        } else if(state==='waiting') {
-
-            clearTimeout(timer);
-
-            state='result';
-
-            box.textContent='Trop tôt ! Réessaie.';
-            box.className='reaction-box';
-
-        } else if(state==='ready') {
-
-            const seconds=(performance.now()-start)/1000;
-
-            if(best===null || seconds<best) {
-                best=seconds;
-                saveRecord('reaction',best);
-            }
-
-            state='result';
-
-            box.className='reaction-box';
-            box.textContent=seconds.toFixed(3)+' seconde(s) ! Rejouer';
-
-            let animal;
-
-            if(seconds<0.18) animal='Guépard 🐆';
-            else if(seconds<0.25) animal='Dauphin 🐬';
-            else if(seconds<0.35) animal='Renard 🦊';
-            else if(seconds<0.50) animal='Chat 🐈';
-            else if(seconds<0.70) animal='Panda 🐼';
-            else animal='Escargot 🐌';
-
-            result.textContent='Ton animal : '+animal;
-
-            updateRecord();
-        }
-    };
-
-    cleanup=()=>clearTimeout(timer);
-}
-
-// =========================
-// 2048
-// =========================
-
-function game2048() {
-
-    shell(`
-        <h3>2048</h3>
-        <p>Utilise les flèches pour déplacer les cases.</p>
-        <div class="score" id="score2048"></div>
-        <div class="board2048" id="board2048"></div>
-        <div id="actions2048"></div>
-    `);
-
-    let board=Array(16).fill(0);
-    let score=0;
-    let best=record('2048',0);
-    let over=false;
-
-    const el=document.getElementById('board2048');
-
-    function addTile() {
-
-        const empty=board
-            .map((v,i)=>v===0?i:null)
-            .filter(v=>v!==null);
-
-        if(empty.length) {
-            board[empty[Math.floor(Math.random()*empty.length)]]=
-                Math.random()<0.9?2:4;
-        }
-    }
-
-    function render() {
-
-        el.innerHTML='';
-
-        board.forEach(v=>{
-
-            const tile=document.createElement('div');
-
-            tile.className='tile2048'+(v?' v'+v:'');
-            tile.textContent=v||'';
-
-            if(v) tile.classList.add('tile-pop');
-
-            el.append(tile);
-        });
-
-        document.getElementById('score2048').textContent=
-            `Score : ${score} | Record : ${best}`+
-            (over?' | Partie terminée':'');
-    }
-
-    function canMove() {
-
-        for(let i=0;i<16;i++) {
-
-            if(!board[i]) return true;
-
-            if(i%4<3 && board[i]===board[i+1]) return true;
-
-            if(i<12 && board[i]===board[i+4]) return true;
-        }
-
-        return false;
-    }
-
-    function move(direction) {
-
-        if(over) return;
-
-        const old=board.join(',');
-
-        for(let line=0;line<4;line++) {
-
-            let ids=Array.from({length:4},(_,i)=>{
-
-                if(direction==='left') return line*4+i;
-                if(direction==='right') return line*4+3-i;
-                if(direction==='up') return i*4+line;
-
-                return (3-i)*4+line;
-            });
-
-            let values=ids.map(i=>board[i]).filter(Boolean);
-            let result=[];
-
-            for(let i=0;i<values.length;i++) {
-
-                if(values[i]===values[i+1]) {
-
-                    result.push(values[i]*2);
-                    score+=values[i]*2;
-                    i++;
-
-                } else {
-                    result.push(values[i]);
-                }
-            }
-
-            while(result.length<4) result.push(0);
-
-            ids.forEach((id,i)=>board[id]=result[i]);
-        }
-
-        if(old!==board.join(',')) {
-
-            addTile();
-
-            if(score>best) {
-                best=score;
-                saveRecord('2048',best);
-            }
-
-            if(!board.includes(0) && !canMove()) over=true;
-
-            render();
-        }
-    }
-
-    document.onkeydown=e=>{
-
-        const keys={
-            ArrowLeft:'left',
-            ArrowRight:'right',
-            ArrowUp:'up',
-            ArrowDown:'down'
-        };
-
-        if(keys[e.key]) {
-            e.preventDefault();
-            move(keys[e.key]);
-        }
-    };
-
-    addTile();
-    addTile();
-    render();
-
-    document.getElementById('actions2048')
-        .append(button('Nouvelle partie',game2048));
-
-    cleanup=()=>{};
 }
