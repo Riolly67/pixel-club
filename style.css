@@ -1,4 +1,3 @@
-
 :root {
     --bg: #101426;
     --panel: #191f35;
@@ -773,5 +772,37 @@ footer span:first-child {
 
     .section-heading {
         align-items: end;
+    }
+}
+
+/* AJOUTS PIXEL CLUB */
+
+.connect4-icon {
+    font-size: 20px;
+}
+
+#snakeCanvas {
+    width: min(480px, 100%);
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.c4-cell {
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .game-panel {
+        padding: 12px;
+    }
+
+    #snakeButtons button {
+        min-width: 68px;
+        min-height: 66px;
+    }
+
+    .connect4-board {
+        gap: 4px;
+        padding: 7px;
     }
 }
