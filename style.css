@@ -1,3 +1,4 @@
+
 :root {
   --bg: #101426;
   --panel: #191f35;
@@ -21,11 +22,7 @@ body {
   min-height: 100vh;
 }
 
-.shell {
-  max-width: 1120px;
-  margin: auto;
-  padding: 0 30px;
-}
+.shell { max-width: 1120px; margin: auto; padding: 0 30px; }
 
 .topbar {
   height: 82px;
@@ -294,6 +291,11 @@ body {
   color: var(--text);
 }
 
+.action:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .score {
   color: var(--cyan);
   margin: 12px;
@@ -326,6 +328,18 @@ body {
 
 /* Memory */
 
+#levels {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+#levels .action {
+  font-size: 11px;
+  padding: 9px 11px;
+}
+
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(48px, 75px));
@@ -336,16 +350,24 @@ body {
 
 .memory-tile {
   aspect-ratio: 1;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #252e49;
   color: var(--text);
-  font-size: 25px;
+  font-size: clamp(17px, 3.5vw, 25px);
   cursor: pointer;
 }
 
-.memory-tile.open { background: #39325f; border-color: var(--purple); }
-.memory-tile.done { background: #17443f; border-color: var(--cyan); }
+.memory-tile.open {
+  background: #39325f;
+  border-color: var(--purple);
+}
+
+.memory-tile.done {
+  background: #17443f;
+  border-color: var(--cyan);
+}
 
 /* Morpion */
 
@@ -413,14 +435,29 @@ body {
 .tile2048.v4 { background: #e8d5a9; color: #3c3a34; }
 .tile2048.v8 { background: #f3ae70; color: white; }
 .tile2048.v16 { background: #f18d61; color: white; }
-.tile2048.v32, .tile2048.v64 { background: #e96d55; color: white; }
-.tile2048.v128, .tile2048.v256, .tile2048.v512,
-.tile2048.v1024, .tile2048.v2048 {
+
+.tile2048.v32,
+.tile2048.v64 {
+  background: #e96d55;
+  color: white;
+}
+
+.tile2048.v128,
+.tile2048.v256,
+.tile2048.v512,
+.tile2048.v1024,
+.tile2048.v2048 {
   background: #a58bff;
   color: #17152b;
 }
 
 /* Puissance 4 */
+
+#c4Modes {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
 
 #c4Columns {
   display: grid;
@@ -430,7 +467,10 @@ body {
   margin: 15px auto 8px;
 }
 
-.c4-column-button { padding: 8px 0; font-size: 1.3rem; }
+.c4-column-button {
+  padding: 8px 0;
+  font-size: 1.3rem;
+}
 
 .connect4-board {
   display: grid;
@@ -483,6 +523,56 @@ body {
   color: #8791ae !important;
 }
 
+/* Simon */
+
+.simon-board {
+  width: min(100%, 330px);
+  aspect-ratio: 1;
+  margin: 22px auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 50%;
+  background: #0d1222;
+}
+
+.simon-pad {
+  border: 4px solid #0d1222;
+  cursor: pointer;
+  opacity: .78;
+  transition: filter .12s, opacity .12s, transform .12s;
+}
+
+.simon-green {
+  background: #22b878;
+  border-radius: 100% 12px 12px 12px;
+}
+
+.simon-red {
+  background: #ed5362;
+  border-radius: 12px 100% 12px 12px;
+}
+
+.simon-yellow {
+  background: #f2c94c;
+  border-radius: 12px 12px 12px 100%;
+}
+
+.simon-blue {
+  background: #478be8;
+  border-radius: 12px 12px 100% 12px;
+}
+
+.simon-pad.active {
+  opacity: 1;
+  filter: brightness(1.65);
+  transform: scale(.97);
+  box-shadow: 0 0 24px #ffffff66;
+}
+
+/* Pied de page */
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -496,22 +586,59 @@ footer {
 
 footer span:first-child { color: var(--cyan); }
 
+/* Adaptation mobile */
+
 @media (max-width: 700px) {
   .shell { padding: 0 18px; }
-  .hero { grid-template-columns: 1fr; padding: 35px 0; }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 35px 0;
+  }
+
   .hero-art { height: 190px; }
   .hero h1 { font-size: 49px; }
-  .game-grid { grid-template-columns: repeat(2, 1fr); }
-  .game-card { min-height: 195px; padding: 17px; }
+
+  .game-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .game-card {
+    min-height: 195px;
+    padding: 17px;
+  }
+
   .game-panel { padding: 14px; }
-  footer { gap: 15px; flex-direction: column; }
+
+  footer {
+    gap: 15px;
+    flex-direction: column;
+  }
+
   .topbar { height: 68px; }
 }
 
 @media (max-width: 420px) {
   .game-grid { grid-template-columns: 1fr; }
+
   .game-card { min-height: 170px; }
-  .hero-cube { width: 105px; height: 105px; }
-  .connect4-board { gap: 4px; padding: 7px; }
+
+  .hero-cube {
+    width: 105px;
+    height: 105px;
+  }
+
+  .connect4-board {
+    gap: 4px;
+    padding: 7px;
+  }
+
   #c4Columns { gap: 4px; }
+
+  .simon-board {
+    width: min(100%, 280px);
+    gap: 8px;
+  }
+
+  .memory-grid { gap: 5px; }
 }
