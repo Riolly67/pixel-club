@@ -1,6 +1,6 @@
 // ==========================================
 // PIXEL CLUB - SCRIPT COMPLET
-// 7 MINI-JEUX
+// 8 MINI-JEUX
 // ==========================================
 
 let cleanup = null;
@@ -16,7 +16,8 @@ const titles = {
   reaction: 'Test de réflexes',
   '2048': '2048',
   connect4: 'Puissance 4',
-  breakout: 'Casse-briques'
+  breakout: 'Casse-briques',
+  simon: 'Simon'
 };
 
 document.querySelectorAll('[data-game]').forEach(card => {
@@ -49,7 +50,8 @@ function openGame(name) {
     reaction,
     '2048': game2048,
     connect4,
-    breakout
+    breakout,
+    simon
   };
 
   games[name]();
@@ -82,6 +84,81 @@ function saveRecord(key, value) {
     localStorage.setItem('pixel-' + key, JSON.stringify(value));
   } catch {}
 }
+
+
+// ==========================================
+// JEU BONUS - SIMON
+// ==========================================
+
+function simon() {
+  shell(`
+    <h3>🎵 Simon</h3>
+    <p>Mémorise la séquence de couleurs et reproduis-la dans le bon ordre.</p>
+    <div class="score" id="simonStatus">Prêt ? Lance une partie !</div>
+    <div class="simon-board">
+      <button class="simon-pad simon-green" data-pad="0" aria-label="Vert"></button>
+      <button class="simon-pad simon-red" data-pad="1" aria-label="Rouge"></button>
+      <button class="simon-pad simon-yellow" data-pad="2" aria-label="Jaune"></button>
+      <button class="simon-pad simon-blue" data-pad="3" aria-label="Bleu"></button>
+    </div>
+    <div id="simonActions"></div>
+    <p class="help">Regarde la séquence, puis reproduis-la. Chaque tour ajoute une couleur.</p>
+  `);
+  const pads=[...document.querySelectorAll('.simon-pad')];
+  const status=document.getElementById('simonStatus');
+  const actions=document.getElementById('simonActions');
+  let sequence=[], position=0, accepting=false, timers=[], best=record('simon',0), round=0;
+
+  function wait(ms) { return new Promise(resolve=>{ const id=setTimeout(resolve,ms); timers.push(id); }); }
+  async function flash(index) {
+    const pad=pads[index];
+    pad.classList.add('active');
+    await wait(330);
+    pad.classList.remove('active');
+    await wait(170);
+  }
+  async function showSequence() {
+    accepting=false;
+    status.textContent=`Mémorise ${sequence.length} couleur(s)...`;
+    await wait(450);
+    for(const color of sequence) await flash(color);
+    position=0;
+    accepting=true;
+    status.textContent='À toi de jouer !';
+  }
+  function nextRound() {
+    round++;
+    sequence.push(Math.floor(Math.random()*4));
+    showSequence();
+  }
+  function start() {
+    timers.forEach(clearTimeout); timers=[];
+    sequence=[]; position=0; round=0; accepting=false;
+    nextRound();
+  }
+  function press(index) {
+    if(!accepting) return;
+    flash(index);
+    if(sequence[position]!==index) {
+      accepting=false;
+      status.textContent=`Raté ! Tu as réussi ${round-1} tour(s). Record : ${best}.`;
+      actions.innerHTML='';
+      actions.append(button('Rejouer',start));
+      return;
+    }
+    position++;
+    if(position===sequence.length) {
+      accepting=false;
+      if(round>best) { best=round; saveRecord('simon',best); }
+      status.textContent=`Bien joué ! Niveau ${round} · Record : ${best}`;
+      const id=setTimeout(nextRound,650); timers.push(id);
+    }
+  }
+  pads.forEach((pad,index)=>pad.addEventListener('click',()=>press(index)));
+  actions.append(button('Commencer',start));
+  cleanup=()=>{timers.forEach(clearTimeout); timers=[]; accepting=false;};
+}
+
 
 // ==========================================
 // 1. SNAKE
@@ -282,6 +359,7 @@ function snake() {
   };
 }
 
+
 // ==========================================
 // 2. MEMORY
 // ==========================================
@@ -298,13 +376,14 @@ function memory() {
 
   const images=['🍉','🚀','🎧','⭐','🍀','🐙','🎲','🌈','🍓','🦊','⚽','🎮','🍩','🐸'];
   const levels=[
-    {name:'Débutant',pairs:3},
-    {name:'Facile',pairs:4},
-    {name:'Intermédiaire',pairs:6},
-    {name:'Difficile',pairs:8},
-    {name:'Expert',pairs:10}
+    {name:'Difficile',pairs:3},
+    {name:'Très difficile',pairs:4},
+    {name:'Expert',pairs:6},
+    {name:'Maître',pairs:8},
+    {name:'Légende',pairs:10},
+    {name:'Extrême',pairs:12},
+    {name:'Ultime',pairs:14}
   ];
-
   let timer;
 
   levels.forEach((level,index)=>{
@@ -315,23 +394,16 @@ function memory() {
 
   function start(index) {
     clearTimeout(timer);
-
     const level=levels[index];
-    const cards=[
-      ...images.slice(0,level.pairs),
-      ...images.slice(0,level.pairs)
-    ].sort(()=>Math.random()-0.5);
-
-    let first=null;
-    let lock=false;
-    let moves=0;
-    let pairs=0;
+    const cards=[...images.slice(0,level.pairs),...images.slice(0,level.pairs)]
+      .sort(()=>Math.random()-0.5);
+    let first=null, lock=false, moves=0, pairs=0;
     const startTime=Date.now();
-
     const grid=document.getElementById('memoryGrid');
     const score=document.getElementById('memoryScore');
-
     grid.innerHTML='';
+    grid.style.gridTemplateColumns=`repeat(${level.pairs<=4?4:Math.min(7,Math.ceil(Math.sqrt(cards.length)))}, minmax(36px, 1fr))`;
+    grid.style.maxWidth=level.pairs<=4?'360px':'min(100%, 560px)';
     document.getElementById('memoryActions').innerHTML='';
     score.textContent=`Paires : 0/${level.pairs}`;
 
@@ -339,66 +411,40 @@ function memory() {
       const card=document.createElement('button');
       card.className='memory-tile';
       card.textContent='?';
-
       card.addEventListener('click',()=>{
-        if(lock || card.classList.contains('open') ||
-           card.classList.contains('done')) return;
-
+        if(lock || card.classList.contains('open') || card.classList.contains('done')) return;
         card.classList.add('open');
         card.textContent=emoji;
-
-        if(!first) {
-          first=card;
-          return;
-        }
-
+        if(!first) { first=card; return; }
         moves++;
-
         if(first.textContent===card.textContent) {
-          first.classList.add('done');
-          card.classList.add('done');
-          first=null;
-          pairs++;
+          first.classList.add('done'); card.classList.add('done');
+          first=null; pairs++;
         } else {
           lock=true;
-          const previous=first;
-          first=null;
-
+          const previous=first; first=null;
           timer=setTimeout(()=>{
-            previous.classList.remove('open');
-            card.classList.remove('open');
-            previous.textContent='?';
-            card.textContent='?';
-            lock=false;
+            previous.classList.remove('open'); card.classList.remove('open');
+            previous.textContent='?'; card.textContent='?'; lock=false;
           },700);
         }
-
         score.textContent=`Coups : ${moves} | Paires : ${pairs}/${level.pairs}`;
-
         if(pairs===level.pairs) {
           const seconds=Math.floor((Date.now()-startTime)/1000);
-          const key='memory-'+index;
-          const old=record(key,null);
-
-          if(!old || moves<old.moves) {
-            saveRecord(key,{moves,time:seconds});
-          }
-
+          const key='memory-'+index, old=record(key,null);
+          if(!old || moves<old.moves) saveRecord(key,{moves,time:seconds});
           const best=record(key,{moves,time:seconds});
           score.textContent=`Bravo ! ${moves} coups en ${seconds}s. Record : ${best.moves} coups !`;
         }
       });
-
       grid.append(card);
     });
-
-    document.getElementById('memoryActions')
-      .append(button('Recommencer',()=>start(index)));
+    document.getElementById('memoryActions').append(button('Recommencer',()=>start(index)));
   }
-
   start(0);
-  cleanup=()=>clearTimeout(timer);
+  cleanup=()=>{clearTimeout(timer);};
 }
+
 
 // ==========================================
 // 3. MORPION
@@ -528,6 +574,7 @@ function tictactoe() {
   reset();
 }
 
+
 // ==========================================
 // 4. TEST DE REFLEXES
 // ==========================================
@@ -618,6 +665,7 @@ function reaction() {
   };
 }
 
+
 // ==========================================
 // 5. PUISSANCE 4
 // ==========================================
@@ -626,99 +674,165 @@ function connect4() {
   shell(`
     <h3>🔴 Puissance 4 🟡</h3>
     <p>Aligne quatre jetons pour gagner !</p>
-    <div class="score" id="c4Status">Au tour du joueur rouge</div>
+    <div id="c4Modes"></div>
+    <div class="score" id="c4Status">À toi de jouer !</div>
     <div id="c4Columns"></div>
     <div class="connect4-board" id="c4Board"></div>
     <div id="c4Actions"></div>
   `);
 
   const rows=6, cols=7;
-  const board=Array.from({length:rows},()=>Array(cols).fill(''));
+  let board, current, finished, mode='ai', thinking=false, aiTimer=null;
   const grid=document.getElementById('c4Board');
   const status=document.getElementById('c4Status');
   const columnButtons=document.getElementById('c4Columns');
+  const modes=document.getElementById('c4Modes');
+  const actions=document.getElementById('c4Actions');
+  const centerOrder=[3,2,4,1,5,0,6];
 
-  let current='red';
-  let finished=false;
+  modes.append(
+    button('Contre le bot',()=>{mode='ai';reset();}),
+    button('Deux joueurs',()=>{mode='two';reset();})
+  );
 
-  function playerName(player) {
-    return player==='red'?'rouge':'jaune';
+  function drop(b,col,player) {
+    for(let r=rows-1;r>=0;r--) if(!b[r][col]) { b[r][col]=player; return r; }
+    return -1;
   }
-
-  function hasWon(row,col,player) {
-    const directions=[[0,1],[1,0],[1,1],[1,-1]];
-
-    for(const [dr,dc] of directions) {
-      let count=1;
-
-      for(const sign of [-1,1]) {
-        let r=row+dr*sign;
-        let c=col+dc*sign;
-
-        while(r>=0 && r<rows && c>=0 && c<cols && board[r][c]===player) {
+  function winning(b,player) {
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+      if(b[r][c]!==player) continue;
+      for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+        let count=1;
+        for(let k=1;k<4;k++) {
+          const rr=r+dr*k, cc=c+dc*k;
+          if(rr<0||rr>=rows||cc<0||cc>=cols||b[rr][cc]!==player) break;
           count++;
-          r+=dr*sign;
-          c+=dc*sign;
         }
+        if(count===4) return true;
       }
-
-      if(count>=4) return true;
     }
-
     return false;
   }
-
-  function render() {
-    grid.innerHTML='';
-
-    for(let r=0;r<rows;r++) {
-      for(let c=0;c<cols;c++) {
-        const cell=document.createElement('div');
-        cell.className='c4-cell'+(board[r][c]?' '+board[r][c]:'');
-        grid.append(cell);
+  function available(b) { return centerOrder.filter(c=>!b[0][c]); }
+  function scoreWindow(window,player) {
+    const opponent=player==='red'?'yellow':'red';
+    const mine=window.filter(x=>x===player).length;
+    const theirs=window.filter(x=>x===opponent).length;
+    const empty=window.filter(x=>!x).length;
+    if(mine===4) return 100000;
+    if(mine===3&&empty===1) return 90;
+    if(mine===2&&empty===2) return 12;
+    if(theirs===3&&empty===1) return -100;
+    if(theirs===2&&empty===2) return -10;
+    return 0;
+  }
+  function evaluate(b,player) {
+    let score=0;
+    for(let r=0;r<rows;r++) if(b[r][3]===player) score+=6;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+      for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+        const cells=[];
+        for(let k=0;k<4;k++) {
+          const rr=r+dr*k, cc=c+dc*k;
+          if(rr<0||rr>=rows||cc<0||cc>=cols) { cells.length=0; break; }
+          cells.push(b[rr][cc]);
+        }
+        if(cells.length===4) score+=scoreWindow(cells,player);
       }
     }
-
-    if(!finished) {
-      status.textContent='Au tour du joueur '+playerName(current);
+    return score;
+  }
+  function minimax(b,depth,alpha,beta,maximizing) {
+    if(winning(b,'yellow')) return 100000+depth;
+    if(winning(b,'red')) return -100000-depth;
+    const moves=available(b);
+    if(depth===0||!moves.length) return evaluate(b,'yellow');
+    if(maximizing) {
+      let value=-Infinity;
+      for(const col of moves) {
+        const copy=b.map(row=>row.slice()); drop(copy,col,'yellow');
+        value=Math.max(value,minimax(copy,depth-1,alpha,beta,false));
+        alpha=Math.max(alpha,value); if(alpha>=beta) break;
+      }
+      return value;
+    } else {
+      let value=Infinity;
+      for(const col of moves) {
+        const copy=b.map(row=>row.slice()); drop(copy,col,'red');
+        value=Math.min(value,minimax(copy,depth-1,alpha,beta,true));
+        beta=Math.min(beta,value); if(alpha>=beta) break;
+      }
+      return value;
     }
   }
-
-  function play(col) {
-    if(finished) return;
-
-    let row=rows-1;
-    while(row>=0 && board[row][col]) row--;
+  function chooseBotMove() {
+    const moves=available(board);
+    for(const col of moves) {
+      const copy=board.map(row=>row.slice()); drop(copy,col,'yellow');
+      if(winning(copy,'yellow')) return col;
+    }
+    for(const col of moves) {
+      const copy=board.map(row=>row.slice()); drop(copy,col,'red');
+      if(winning(copy,'red')) return col;
+    }
+    let best=-Infinity, choice=moves[0];
+    for(const col of moves) {
+      const copy=board.map(row=>row.slice()); drop(copy,col,'yellow');
+      const value=minimax(copy,4,-Infinity,Infinity,false);
+      if(value>best) { best=value; choice=col; }
+    }
+    return choice;
+  }
+  function render() {
+    grid.innerHTML='';
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+      const cell=document.createElement('div');
+      cell.className='c4-cell'+(board[r][c]?' '+board[r][c]:'');
+      grid.append(cell);
+    }
+    if(!finished) status.textContent=mode==='ai'&&current==='yellow'?'Le bot réfléchit...':'Au tour du joueur '+(current==='red'?'rouge':'jaune');
+  }
+  function play(col,fromBot=false) {
+    if(finished||thinking||board[0][col]) return;
+    if(mode==='ai'&&current==='yellow'&&!fromBot) return;
+    const row=drop(board,col,current);
     if(row<0) return;
-
-    board[row][col]=current;
     render();
-
-    if(hasWon(row,col,current)) {
+    if(winning(board,current)) {
       finished=true;
-      status.textContent='Le joueur '+playerName(current)+' a gagné ! 🎉';
+      status.textContent=mode==='ai'&&current==='yellow'?'Le bot a gagné !':'Le joueur '+(current==='red'?'rouge':'jaune')+' a gagné ! 🎉';
       return;
     }
-
-    if(board.every(line=>line.every(Boolean))) {
-      finished=true;
-      status.textContent='Match nul !';
-      return;
+    if(available(board).length===0) {
+      finished=true; status.textContent='Match nul !'; return;
     }
-
     current=current==='red'?'yellow':'red';
-    status.textContent='Au tour du joueur '+playerName(current);
+    render();
+    if(mode==='ai'&&current==='yellow') {
+      thinking=true;
+      aiTimer=setTimeout(()=>{
+        thinking=false;
+        if(!finished) play(chooseBotMove(),true);
+      },350);
+    }
   }
-
-  for(let c=0;c<cols;c++) {
-    const b=button('↓',()=>play(c));
-    b.classList.add('c4-column-button');
-    columnButtons.append(b);
+  function reset() {
+    clearTimeout(aiTimer); thinking=false;
+    board=Array.from({length:rows},()=>Array(cols).fill(''));
+    current='red'; finished=false;
+    columnButtons.innerHTML=''; actions.innerHTML='';
+    for(let c=0;c<cols;c++) {
+      const b=button('↓',()=>play(c));
+      b.classList.add('c4-column-button'); columnButtons.append(b);
+    }
+    actions.append(button('Rejouer',reset));
+    render();
   }
-
-  document.getElementById('c4Actions').append(button('Rejouer',connect4));
-  render();
+  reset();
+  cleanup=()=>{clearTimeout(aiTimer);thinking=false;};
 }
+
 
 // ==========================================
 // 6. 2048
@@ -838,6 +952,7 @@ function game2048() {
   cleanup=()=>{};
 }
 
+
 // ==========================================
 // 7. CASSE-BRIQUES
 // ==========================================
@@ -845,365 +960,165 @@ function game2048() {
 function breakout() {
   shell(`
     <h3>🧱 Casse-briques</h3>
-    <p>Détruis toutes les briques avec la balle !</p>
-    <div class="score" id="breakoutScore">Score : 0 · Vies : 3</div>
-    <canvas id="breakoutCanvas" width="560" height="420"></canvas>
+    <p>Casse toutes les briques, récupère les bonus et passe les niveaux !</p>
+    <div class="score" id="breakoutScore">Niveau : 1 · Score : 0 · Vies : 3</div>
+    <canvas id="breakoutCanvas" width="560" height="440"></canvas>
     <div class="breakout-controls">
       <button class="action secondary" id="breakoutLeft">← Gauche</button>
       <button class="action" id="breakoutStart">Lancer la balle</button>
       <button class="action secondary" id="breakoutRight">Droite →</button>
     </div>
-    <p class="help">Déplace la raquette avec les flèches, la souris ou les boutons.</p>
+    <p class="help">Flèches, souris ou boutons pour déplacer la raquette. Attrape les bonus qui tombent !</p>
     <div id="breakoutMessage"></div>
   `);
-
-  const canvas=document.getElementById('breakoutCanvas');
-  const ctx=canvas.getContext('2d');
+  const canvas=document.getElementById('breakoutCanvas'), ctx=canvas.getContext('2d');
   const scoreDisplay=document.getElementById('breakoutScore');
   const message=document.getElementById('breakoutMessage');
   const startButton=document.getElementById('breakoutStart');
-
-  const W=canvas.width;
-  const H=canvas.height;
-
-  const paddle={
-    width:105,
-    height:13,
-    x:(W-105)/2,
-    y:H-32,
-    speed:7
-  };
-
-  const ball={
-    x:W/2,
-    y:paddle.y-10,
-    radius:8,
-    dx:3.5,
-    dy:-4
-  };
-
-  const brickRows=5;
-  const brickCols=9;
-  const brickWidth=52;
-  const brickHeight=17;
-  const brickGap=8;
-  const brickTop=55;
-  const brickLeft=(W-(brickCols*(brickWidth+brickGap)-brickGap))/2;
-
-  const colors=['#ff6b83','#ffad66','#ffe16b','#65e3d2','#a58bff'];
-
-  let bricks=[];
-  let score=0;
-  let lives=3;
-  let running=false;
-  let launched=false;
-  let finished=false;
-  let animation=null;
-  let leftPressed=false;
-  let rightPressed=false;
+  const W=canvas.width,H=canvas.height;
+  const paddle={width:100,height:13,x:230,y:H-32,speed:7,baseWidth:100};
+  const ball={x:W/2,y:paddle.y-10,radius:8,dx:3.5,dy:-4};
+  const colors=['#ff6b83','#ffad66','#ffe16b','#65e3d2','#a58bff','#8db7ff','#ff8ac7'];
+  let bricks=[], powerups=[], score=0, lives=3, level=1;
+  let running=false,launched=false,finished=false,animation=null;
+  let leftPressed=false,rightPressed=false,wideTimer=0,slowTimer=0;
 
   function createBricks() {
     bricks=[];
-
-    for(let r=0;r<brickRows;r++) {
-      for(let c=0;c<brickCols;c++) {
-        bricks.push({
-          x:brickLeft+c*(brickWidth+brickGap),
-          y:brickTop+r*(brickHeight+brickGap),
-          width:brickWidth,
-          height:brickHeight,
-          color:colors[r],
-          alive:true
-        });
-      }
+    const rows=Math.min(5+level,8), cols=12, gap=5, width=40, height=15;
+    const left=(W-(cols*(width+gap)-gap))/2;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+      bricks.push({x:left+c*(width+gap),y:42+r*(height+gap),width,height,
+        color:colors[(r+level-1)%colors.length],alive:true,hp:level>=4&&r%3===0?2:1});
     }
   }
-
   function resetBall() {
-    ball.x=paddle.x+paddle.width/2;
-    ball.y=paddle.y-ball.radius-2;
-    ball.dx=3.5*(Math.random()<0.5?-1:1);
-    ball.dy=-4;
-    launched=false;
-    startButton.textContent='Lancer la balle';
+    ball.x=paddle.x+paddle.width/2; ball.y=paddle.y-ball.radius-2;
+    const speed=3.4+Math.min(level*.25,2);
+    ball.dx=speed*(Math.random()<.5?-1:1); ball.dy=-(speed+0.6);
+    launched=false; startButton.textContent='Lancer la balle';
   }
-
   function updateScore() {
-    scoreDisplay.textContent=`Score : ${score} · Vies : ${lives}`;
+    scoreDisplay.textContent=`Niveau : ${level} · Score : ${score} · Vies : ${lives}`;
   }
-
   function draw() {
-    ctx.clearRect(0,0,W,H);
-
-    // Fond
-    ctx.fillStyle='#10172a';
-    ctx.fillRect(0,0,W,H);
-
-    // Décoration
+    ctx.fillStyle='#10172a'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#ffffff12';
-    for(let i=0;i<25;i++) {
-      ctx.fillRect((i*83)%W,(i*47)%H,2,2);
-    }
-
-    // Briques
-    bricks.forEach(brick=>{
-      if(!brick.alive) return;
-
-      ctx.fillStyle=brick.color;
-      ctx.beginPath();
-      ctx.roundRect(brick.x,brick.y,brick.width,brick.height,5);
-      ctx.fill();
-
-      ctx.fillStyle='#ffffff35';
-      ctx.fillRect(brick.x+5,brick.y+3,brick.width-10,3);
+    for(let i=0;i<28;i++) ctx.fillRect((i*83)%W,(i*47)%H,2,2);
+    bricks.forEach(b=>{
+      if(!b.alive)return;
+      ctx.fillStyle=b.color; ctx.beginPath(); ctx.roundRect(b.x,b.y,b.width,b.height,4); ctx.fill();
+      ctx.fillStyle='#ffffff45'; ctx.fillRect(b.x+4,b.y+3,b.width-8,2);
+      if(b.hp>1){ctx.fillStyle='#222';ctx.font='10px sans-serif';ctx.fillText('2',b.x+b.width/2-3,b.y+12);}
     });
-
-    // Raquette
-    ctx.fillStyle='#65e3d2';
-    ctx.beginPath();
-    ctx.roundRect(paddle.x,paddle.y,paddle.width,paddle.height,7);
-    ctx.fill();
-
-    // Balle
-    ctx.fillStyle='#ffffff';
-    ctx.beginPath();
-    ctx.arc(ball.x,ball.y,ball.radius,0,Math.PI*2);
-    ctx.fill();
-
-    // Petit halo
-    ctx.shadowColor='#65e3d2';
-    ctx.shadowBlur=12;
-    ctx.beginPath();
-    ctx.arc(ball.x,ball.y,ball.radius-3,0,Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur=0;
+    powerups.forEach(p=>{
+      ctx.fillStyle=p.type==='wide'?'#65e3d2':p.type==='life'?'#ffdc45':'#a58bff';
+      ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#101426';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.type==='wide'?'↔':p.type==='life'?'+':'S',p.x,p.y+4);
+    });
+    ctx.fillStyle='#65e3d2';ctx.beginPath();ctx.roundRect(paddle.x,paddle.y,paddle.width,paddle.height,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.radius,0,Math.PI*2);ctx.fill();
   }
-
   function movePaddle() {
-    if(leftPressed) paddle.x-=paddle.speed;
-    if(rightPressed) paddle.x+=paddle.speed;
-
+    if(leftPressed)paddle.x-=paddle.speed;
+    if(rightPressed)paddle.x+=paddle.speed;
     paddle.x=Math.max(0,Math.min(W-paddle.width,paddle.x));
-
-    if(!launched) {
-      ball.x=paddle.x+paddle.width/2;
-      ball.y=paddle.y-ball.radius-2;
-    }
+    if(!launched){ball.x=paddle.x+paddle.width/2;ball.y=paddle.y-ball.radius-2;}
   }
-
-  function collisionWithPaddle() {
-    if(
-      ball.dy>0 &&
-      ball.y+ball.radius>=paddle.y &&
-      ball.y-ball.radius<=paddle.y+paddle.height &&
-      ball.x>=paddle.x &&
-      ball.x<=paddle.x+paddle.width
-    ) {
+  function collidePaddle() {
+    if(ball.dy>0&&ball.y+ball.radius>=paddle.y&&ball.y-ball.radius<=paddle.y+paddle.height&&
+      ball.x>=paddle.x&&ball.x<=paddle.x+paddle.width) {
       const hit=(ball.x-(paddle.x+paddle.width/2))/(paddle.width/2);
-      ball.dx=hit*5;
-      ball.dy=-Math.sqrt(Math.max(8,ball.dx*ball.dx+ball.dy*ball.dy));
+      ball.dx=hit*5.2; ball.dy=-Math.sqrt(Math.max(9,ball.dx**2+ball.dy**2));
       ball.y=paddle.y-ball.radius;
     }
   }
-
-  function finish(won) {
-    running=false;
-    finished=true;
-    cancelAnimationFrame(animation);
-
-    message.innerHTML=won
-      ? '<p>🎉 Bravo ! Tu as détruit toutes les briques !</p>'
-      : '<p>Partie terminée ! Essaie encore.</p>';
-
+  function end(won) {
+    running=false;finished=true;cancelAnimationFrame(animation);
+    message.textContent=won?'🏆 Bravo ! Tu as terminé tous les niveaux !':'Partie terminée ! Tu peux retenter ta chance.';
     startButton.textContent='Rejouer';
   }
-
+  function nextLevel() {
+    level++;
+    if(level>5){end(true);return;}
+    createBricks();powerups=[];paddle.width=paddle.baseWidth;paddle.x=(W-paddle.width)/2;
+    resetBall();running=false;message.textContent=`Niveau ${level} ! Lance la balle quand tu es prêt.`;
+    updateScore();draw();
+  }
+  function applyPowerup(type) {
+    if(type==='wide'){paddle.width=150;wideTimer=Date.now()+9000;}
+    if(type==='life'){lives=Math.min(5,lives+1);}
+    if(type==='slow'){slowTimer=Date.now()+9000;ball.dx*=.72;ball.dy*=.72;}
+    updateScore();
+  }
   function update() {
-    if(!running) return;
-
+    if(!running)return;
     movePaddle();
-
+    if(Date.now()>wideTimer&&wideTimer){paddle.width=paddle.baseWidth;wideTimer=0;paddle.x=Math.min(paddle.x,W-paddle.width);}
+    if(Date.now()>slowTimer&&slowTimer){ball.dx*=1.38;ball.dy*=1.38;slowTimer=0;}
     if(launched) {
-      ball.x+=ball.dx;
-      ball.y+=ball.dy;
-
-      // Murs gauche et droit
-      if(ball.x-ball.radius<=0 || ball.x+ball.radius>=W) {
-        ball.dx*=-1;
-      }
-
-      // Mur du haut
-      if(ball.y-ball.radius<=0) {
-        ball.dy=Math.abs(ball.dy);
-      }
-
-      collisionWithPaddle();
-
-      // Collision avec les briques
-      for(const brick of bricks) {
-        if(!brick.alive) continue;
-
-        if(
-          ball.x+ball.radius>brick.x &&
-          ball.x-ball.radius<brick.x+brick.width &&
-          ball.y+ball.radius>brick.y &&
-          ball.y-ball.radius<brick.y+brick.height
-        ) {
-          brick.alive=false;
-          score+=10;
-          ball.dy*=-1;
-          updateScore();
-          break;
+      ball.x+=ball.dx;ball.y+=ball.dy;
+      if(ball.x-ball.radius<=0||ball.x+ball.radius>=W)ball.dx*=-1;
+      if(ball.y-ball.radius<=0)ball.dy=Math.abs(ball.dy);
+      collidePaddle();
+      for(const b of bricks) {
+        if(!b.alive)continue;
+        if(ball.x+ball.radius>b.x&&ball.x-ball.radius<b.x+b.width&&ball.y+ball.radius>b.y&&ball.y-ball.radius<b.y+b.height) {
+          b.hp--;if(b.hp<=0){b.alive=false;score+=10;
+            if(Math.random()<.16)powerups.push({x:b.x+b.width/2,y:b.y+b.height/2,type:['wide','life','slow'][Math.floor(Math.random()*3)]});
+          } else score+=3;
+          ball.dy*=-1;updateScore();break;
         }
       }
-
-      // Balle perdue
+      powerups.forEach(p=>p.y+=2.4);
+      powerups=powerups.filter(p=>{
+        if(p.y+9>=paddle.y&&p.y-9<=paddle.y+paddle.height&&p.x>=paddle.x&&p.x<=paddle.x+paddle.width){applyPowerup(p.type);return false;}
+        return p.y<H+15;
+      });
       if(ball.y-ball.radius>H) {
-        lives--;
-        updateScore();
-
-        if(lives<=0) {
-          finish(false);
-          return;
-        }
-
+        lives--;updateScore();
+        if(lives<=0){end(false);return;}
         resetBall();
       }
-
-      // Toutes les briques détruites
-      if(bricks.every(brick=>!brick.alive)) {
-        finish(true);
-        return;
-      }
+      if(bricks.every(b=>!b.alive)){nextLevel();if(finished)return;}
     }
-
-    draw();
-    animation=requestAnimationFrame(update);
+    draw();animation=requestAnimationFrame(update);
   }
-
   function launch() {
-    if(finished) {
-      restart();
-      return;
-    }
-
-    if(!launched) {
-      launched=true;
-      startButton.textContent='Balle lancée';
-    }
-
-    if(!running) {
-      running=true;
-      message.textContent='';
-      update();
-    }
+    if(finished){restart();return;}
+    if(!launched){launched=true;startButton.textContent='Balle lancée';}
+    if(!running){running=true;message.textContent='';update();}
   }
-
   function restart() {
-    cancelAnimationFrame(animation);
-
-    score=0;
-    lives=3;
-    running=false;
-    launched=false;
-    finished=false;
-    leftPressed=false;
-    rightPressed=false;
-
-    paddle.x=(W-paddle.width)/2;
-
-    createBricks();
-    resetBall();
-    updateScore();
-
-    message.textContent='Bonne chance !';
-    draw();
-    launch();
+    cancelAnimationFrame(animation);score=0;lives=3;level=1;running=false;launched=false;finished=false;
+    leftPressed=false;rightPressed=false;powerups=[];wideTimer=0;slowTimer=0;
+    paddle.width=paddle.baseWidth;paddle.x=(W-paddle.width)/2;
+    createBricks();resetBall();updateScore();message.textContent='Bonne chance !';draw();launch();
   }
-
-  function stop() {
-    running=false;
-    cancelAnimationFrame(animation);
-    leftPressed=false;
-    rightPressed=false;
-  }
-
-  // Clavier
   function keyDown(e) {
-    if(e.key==='ArrowLeft') {
-      e.preventDefault();
-      leftPressed=true;
-    }
-
-    if(e.key==='ArrowRight') {
-      e.preventDefault();
-      rightPressed=true;
-    }
-
-    if(e.code==='Space') {
-      e.preventDefault();
-      launch();
-    }
+    if(e.key==='ArrowLeft'){e.preventDefault();leftPressed=true;}
+    if(e.key==='ArrowRight'){e.preventDefault();rightPressed=true;}
+    if(e.code==='Space'){e.preventDefault();launch();}
   }
-
-  function keyUp(e) {
-    if(e.key==='ArrowLeft') leftPressed=false;
-    if(e.key==='ArrowRight') rightPressed=false;
-  }
-
-  document.addEventListener('keydown',keyDown);
-  document.addEventListener('keyup',keyUp);
-
-  // Souris
+  function keyUp(e){if(e.key==='ArrowLeft')leftPressed=false;if(e.key==='ArrowRight')rightPressed=false;}
   function mouseMove(e) {
-    const rect=canvas.getBoundingClientRect();
-    const scale=W/rect.width;
-    const mouseX=(e.clientX-rect.left)*scale;
-
-    paddle.x=Math.max(
-      0,
-      Math.min(W-paddle.width,mouseX-paddle.width/2)
-    );
+    const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)*(W/rect.width);
+    paddle.x=Math.max(0,Math.min(W-paddle.width,x-paddle.width/2));
   }
-
-  canvas.addEventListener('mousemove',mouseMove);
-
-  // Commandes tactiles
-  const leftButton=document.getElementById('breakoutLeft');
-  const rightButton=document.getElementById('breakoutRight');
-
-  leftButton.addEventListener('pointerdown',e=>{
-    e.preventDefault();
-    leftPressed=true;
+  const leftButton=document.getElementById('breakoutLeft'),rightButton=document.getElementById('breakoutRight');
+  const release=()=>{leftPressed=false;rightPressed=false;};
+  leftButton.addEventListener('pointerdown',e=>{e.preventDefault();leftPressed=true;});
+  rightButton.addEventListener('pointerdown',e=>{e.preventDefault();rightPressed=true;});
+  ['pointerup','pointerleave','pointercancel'].forEach(type=>{
+    leftButton.addEventListener(type,release);rightButton.addEventListener(type,release);
   });
-
-  rightButton.addEventListener('pointerdown',e=>{
-    e.preventDefault();
-    rightPressed=true;
-  });
-
-  function releaseControls() {
-    leftPressed=false;
-    rightPressed=false;
-  }
-
-  leftButton.addEventListener('pointerup',releaseControls);
-  rightButton.addEventListener('pointerup',releaseControls);
-  leftButton.addEventListener('pointerleave',releaseControls);
-  rightButton.addEventListener('pointerleave',releaseControls);
-  leftButton.addEventListener('pointercancel',releaseControls);
-  rightButton.addEventListener('pointercancel',releaseControls);
-
-  startButton.addEventListener('click',launch);
-
-  createBricks();
-  updateScore();
-  draw();
-
+  document.addEventListener('keydown',keyDown);document.addEventListener('keyup',keyUp);
+  canvas.addEventListener('mousemove',mouseMove);startButton.addEventListener('click',launch);
+  createBricks();updateScore();draw();
   cleanup=()=>{
-    stop();
-    document.removeEventListener('keydown',keyDown);
-    document.removeEventListener('keyup',keyUp);
-    canvas.removeEventListener('mousemove',mouseMove);
+    running=false;cancelAnimationFrame(animation);
+    document.removeEventListener('keydown',keyDown);document.removeEventListener('keyup',keyUp);
+    canvas.removeEventListener('mousemove',mouseMove);release();
   };
 }
